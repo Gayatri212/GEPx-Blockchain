@@ -12,6 +12,7 @@ Hyperledger fabric POC
 - NodeJS (v14.15.1)
 - Docker
 - Docker-compose
+To install prerequisites execute [installation.sh](https://github.com/Gayatri212/GEPx-Blockchain/blob/main/installation.sh) file 
 
 #### Installing Hyperledger Fabric
 
