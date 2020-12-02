@@ -77,16 +77,6 @@ npm install
 This will install all the dependencies of application and you will get following in logs
 ```
 found 0 vulnerabilities
-
-
-
-   ╭────────────────────────────────────────────────────────────────╮
-   │                                                                │
-   │      New patch version of npm available! 6.14.8 → 6.14.9       │
-   │   Changelog: https://github.com/npm/cli/releases/tag/v6.14.9   │
-   │               Run npm install -g npm to update!                │
-   │                                                                │
-   ╰────────────────────────────────────────────────────────────────╯
 ```
 
 1. Enroll organization
