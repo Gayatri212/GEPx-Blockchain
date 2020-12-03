@@ -110,7 +110,7 @@ Built a CA Client named ca-org1
 Built a file system wallet at /opt/go/src/github.com/fabric-samples/GEPx-Blockchain/application-javascript/wallet/org1
 Successfully registered and enrolled user adminuser and imported it into the wallet
 
-$ node createTransaction.js org1 adminuser tx1
+$ node createSession.js org1 adminuser tx1
 Loaded the network configuration located at /opt/go/src/github.com/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/connection-org1.json
 Built a file system wallet at /opt/go/src/github.com/fabric-samples/GEPx-Blockchain/application-javascript/wallet/org1
 
@@ -251,7 +251,7 @@ Built a file system wallet at /opt/go/src/github.com/fabric-samples/GEPx-Blockch
 5. Stop Bidding -
 Once all bids are placed admin user can stop the bidding process then users can finalize their bids.
 ```
-$ node closeTransaction.js org1 adminuser tx1
+$ node closeSession.js org1 adminuser tx1
 Loaded the network configuration located at /opt/go/src/github.com/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/connection-org1.json
 Built a file system wallet at /opt/go/src/github.com/fabric-samples/GEPx-Blockchain/application-javascript/wallet/org1
 
@@ -281,7 +281,7 @@ Built a file system wallet at /opt/go/src/github.com/fabric-samples/GEPx-Blockch
 
 6. Finalize bids
 ```
-$ node revealBid.js org1 seller1 tx1 2f21a9738ef1bd651154a3015af8f566986b138ef453830aebad325e0c8e18b3
+$ node finalizeBid.js org1 seller1 tx1 2f21a9738ef1bd651154a3015af8f566986b138ef453830aebad325e0c8e18b3
 Loaded the network configuration located at /opt/go/src/github.com/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/connection-org1.json
 Built a file system wallet at /opt/go/src/github.com/fabric-samples/GEPx-Blockchain/application-javascript/wallet/org1
 
@@ -323,7 +323,7 @@ Built a file system wallet at /opt/go/src/github.com/fabric-samples/GEPx-Blockch
 }
 
 
-$ node revealBid.js org1 buyer1 tx1 07d17392eeeaf3fbdd930aa1753765dca157a0b463bef88f581ed4b94e17f099
+$ node finalizeBid.js org1 buyer1 tx1 07d17392eeeaf3fbdd930aa1753765dca157a0b463bef88f581ed4b94e17f099
 Loaded the network configuration located at /opt/go/src/github.com/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/connection-org1.json
 Built a file system wallet at /opt/go/src/github.com/fabric-samples/GEPx-Blockchain/application-javascript/wallet/org1
 
@@ -372,10 +372,10 @@ Built a file system wallet at /opt/go/src/github.com/fabric-samples/GEPx-Blockch
 }
 ```
 
-6. End transaction - 
+6. End session - 
 End transaction will update the status of bids approved/partially approved/declined based on smart contract. Only Finalized bids will be considered for approval.
 ```
-$ node endTransaction.js org1 adminuser tx1
+$ node endSession.js org1 adminuser tx1
 Loaded the network configuration located at /opt/go/src/github.com/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/connection-org1.json
 Built a file system wallet at /opt/go/src/github.com/fabric-samples/GEPx-Blockchain/application-javascript/wallet/org1
 
