@@ -17,7 +17,9 @@ To install prerequisites execute [installation.sh](https://github.com/Gayatri212
 #### Installing Hyperledger Fabric
 
 ```
-cd $GOPATH/src/github.com
+cd $GOPATH
+chmod +wx src
+cd src
 sudo curl -sSL https://bit.ly/2ysbOFE | bash -s
 ```
 This will install hyperledger fabric including [fabric-samples](https://github.com/hyperledger/fabric-samples) folder which we will use for creating test-network with CA.
@@ -79,7 +81,7 @@ This will install all the dependencies of application and you will get following
 found 0 vulnerabilities
 ```
 
-1. Enroll organization
+1. Enroll nodes
 ```
 node enrollAdmin.js org1
 node enrollAdmin.js org2
@@ -93,7 +95,7 @@ Built a file system wallet at /opt/go/src/github.com/fabric-samples/GEPx-Blockch
 Successfully enrolled admin user and imported it into the wallet
 ```
 
-2. Register admin user and create transaction
+2. Register admin user and create session
 ```
 node registerEnrollUser.js org1 adminuser
 node createTransaction.js org1 adminuser tx1
