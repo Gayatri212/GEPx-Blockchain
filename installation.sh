@@ -22,4 +22,5 @@ sudo yum install -y nodejs
 # Copy paste following to that file
 # export PATH=$PATH:/usr/local/go/bin
 # export GOPATH=/usr/local/go
+# save it and restart the VM
 
