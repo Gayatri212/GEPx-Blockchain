@@ -23,7 +23,7 @@ function prettyJSONString(inputString) {
     }
 }
 
-async function endTransaction(ccp,wallet,user,transactionID) {
+async function endSession(ccp,wallet,user,sessionID) {
     try {
 
         const gateway = new Gateway();
@@ -35,27 +35,27 @@ async function endTransaction(ccp,wallet,user,transactionID) {
         const network = await gateway.getNetwork(myChannel);
         const contract = network.getContract(myChaincodeName);
 
-        // Query the transaction to get the list of endorsing orgs.
-        //console.log('\n--> Evaluate Transaction: query the transaction you want to end');
-        let transactionString = await contract.evaluateTransaction('QueryTransaction',transactionID);
-        //console.log('*** Result:  Bid: ' + prettyJSONString(transactionString.toString()));
-        var transactionJSON = JSON.parse(transactionString);
+        // Query the session to get the list of endorsing orgs.
+        //console.log('\n--> Evaluate Session: query the session you want to end');
+        let sessionString = await contract.evaluateTransaction('QuerySession',sessionID);
+        //console.log('*** Result:  Bid: ' + prettyJSONString(sessionString.toString()));
+        var sessionJSON = JSON.parse(sessionString);
 
-        let statefulTxn = contract.createTransaction('EndTransaction');
+        let statefulTxn = contract.createTransaction('EndSession');
 
-        if (transactionJSON.organizations.length == 2) {
-            statefulTxn.setEndorsingOrganizations(transactionJSON.organizations[0],transactionJSON.organizations[1]);
+        if (sessionJSON.organizations.length == 2) {
+            statefulTxn.setEndorsingOrganizations(sessionJSON.organizations[0],sessionJSON.organizations[1]);
         } else {
-            statefulTxn.setEndorsingOrganizations(transactionJSON.organizations[0]);
+            statefulTxn.setEndorsingOrganizations(sessionJSON.organizations[0]);
             }
 
-        console.log('\n--> Submit the transaction to end the transaction');
-        await statefulTxn.submit(transactionID);
+        console.log('\n--> Submit the session to end the session');
+        await statefulTxn.submit(sessionID);
         console.log('*** Result: committed');
 
-        console.log('\n--> Evaluate Transaction: query the updated transaction');
-        let result = await contract.evaluateTransaction('QueryTransaction',transactionID);
-        console.log('*** Result: Transaction: ' + prettyJSONString(result.toString()));
+        console.log('\n--> Evaluate Session: query the updated session');
+        let result = await contract.evaluateTransaction('QuerySession',sessionID);
+        console.log('*** Result: Session: ' + prettyJSONString(result.toString()));
 
         gateway.disconnect();
     } catch (error) {
@@ -69,13 +69,13 @@ async function main() {
 
         if (process.argv[2] == undefined || process.argv[3] == undefined
             || process.argv[4] == undefined) {
-            console.log("Usage: node endTransaction.js org userID transactionID");
+            console.log("Usage: node endSession.js org userID sessionID");
             process.exit(1);
         }
 
         const org = process.argv[2]
         const user = process.argv[3];
-        const transactionID = process.argv[4];
+        const sessionID = process.argv[4];
 
         if (org == 'Org1' || org == 'org1') {
 
@@ -83,7 +83,7 @@ async function main() {
             const ccp = buildCCPOrg1();
             const walletPath = path.join(__dirname, 'wallet/org1');
             const wallet = await buildWallet(Wallets, walletPath);
-            await endTransaction(ccp,wallet,user,transactionID);
+            await endSession(ccp,wallet,user,sessionID);
         }
         else if (org == 'Org2' || org == 'org2') {
 
@@ -91,9 +91,9 @@ async function main() {
             const ccp = buildCCPOrg2();
             const walletPath = path.join(__dirname, 'wallet/org2');
             const wallet = await buildWallet(Wallets, walletPath);
-            await endTransaction(ccp,wallet,user,transactionID);
+            await endSession(ccp,wallet,user,sessionID);
         }  else {
-            console.log("Usage: node endTransaction.js org userID transactionID");
+            console.log("Usage: node endSession.js org userID sessionID");
             console.log("Org must be Org1 or Org2");
           }
     } catch (error) {

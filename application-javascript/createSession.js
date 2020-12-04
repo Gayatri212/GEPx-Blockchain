@@ -23,7 +23,7 @@ function prettyJSONString(inputString) {
     }
 }
 
-async function createTransaction(ccp,wallet,user,transactionID) {
+async function createSession(ccp,wallet,user,sessionID) {
     try {
 
         const gateway = new Gateway();
@@ -35,15 +35,15 @@ async function createTransaction(ccp,wallet,user,transactionID) {
         const network = await gateway.getNetwork(myChannel);
         const contract = network.getContract(myChaincodeName);
 
-        let statefulTxn = contract.createTransaction('CreateTransaction');
+        let statefulTxn = contract.createTransaction('CreateSession');
 
-        console.log('\n--> Submit Transaction: Propose a new transaction');
-        await statefulTxn.submit(transactionID);
+        console.log('\n--> Submit Session: Propose a new session');
+        await statefulTxn.submit(sessionID);
         console.log('*** Result: committed');
 
-        console.log('\n--> Evaluate Transaction: query the transaction that was just created');
-        let result = await contract.evaluateTransaction('QueryTransaction',transactionID);
-        console.log('*** Result: Transaction: ' + prettyJSONString(result.toString()));
+        console.log('\n--> Evaluate Session: query the session that was just created');
+        let result = await contract.evaluateTransaction('QuerySession',sessionID);
+        console.log('*** Result: Session: ' + prettyJSONString(result.toString()));
 
         gateway.disconnect();
     } catch (error) {
@@ -56,13 +56,13 @@ async function main() {
 
         if (process.argv[2] == undefined || process.argv[3] == undefined
             || process.argv[4] == undefined) {
-            console.log("Usage: node createTransaction.js org userID transactionID");
+            console.log("Usage: node createSession.js org userID sessionID");
             process.exit(1);
         }
 
         const org = process.argv[2]
         const user = process.argv[3];
-        const transactionID = process.argv[4];
+        const sessionID = process.argv[4];
 
         if (org == 'Org1' || org == 'org1') {
 
@@ -70,7 +70,7 @@ async function main() {
             const ccp = buildCCPOrg1();
             const walletPath = path.join(__dirname, 'wallet/org1');
             const wallet = await buildWallet(Wallets, walletPath);
-            await createTransaction(ccp,wallet,user,transactionID);
+            await createSession(ccp,wallet,user,sessionID);
         }
         else if (org == 'Org2' || org == 'org2') {
 
@@ -78,9 +78,9 @@ async function main() {
             const ccp = buildCCPOrg2();
             const walletPath = path.join(__dirname, 'wallet/org2');
             const wallet = await buildWallet(Wallets, walletPath);
-            await createTransaction(ccp,wallet,user,transactionID);
+            await createSession(ccp,wallet,user,sessionID);
         }  else {
-            console.log("Usage: node createTransaction.js org userID transactionID");
+            console.log("Usage: node createSession.js org userID sessionID");
             console.log("Org must be Org1 or Org2");
           }
     } catch (error) {

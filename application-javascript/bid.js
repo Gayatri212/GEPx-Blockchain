@@ -23,7 +23,7 @@ function prettyJSONString(inputString) {
     }
 }
 
-async function bid(ccp,wallet,user,orgMSP,transactionID,volume,bidType) {
+async function bid(ccp,wallet,user,orgMSP,sessionID,volume,bidType) {
     try {
 
         const gateway = new Gateway();
@@ -35,7 +35,7 @@ async function bid(ccp,wallet,user,orgMSP,transactionID,volume,bidType) {
         const network = await gateway.getNetwork(myChannel);
         const contract = network.getContract(myChaincodeName);
 
-        console.log('\n--> Evaluate Transaction: get your client ID');
+        console.log('\n--> Evaluate Session: get your client ID');
         let bidder = await contract.evaluateTransaction('GetID');
         console.log('*** Result:  Bidder ID is ' + bidder.toString());
 
@@ -48,15 +48,15 @@ async function bid(ccp,wallet,user,orgMSP,transactionID,volume,bidType) {
               bid: tmapData
             });
 
-        let bidID = statefulTxn.getTransactionId();
+        let bidID = statefulTxn.getSessionId();
 
-        console.log('\n--> Submit Transaction: Create the bid that is stored in your organization\'s private data collection');
-        await statefulTxn.submit(transactionID);
+        console.log('\n--> Submit Session: Create the bid that is stored in your organization\'s private data collection');
+        await statefulTxn.submit(sessionID);
         console.log('*** Result: committed');
         console.log('*** Result ***SAVE THIS VALUE*** BidID: ' + bidID.toString());
 
-        console.log('\n--> Evaluate Transaction: read the bid that was just created');
-        let result = await contract.evaluateTransaction('QueryBid',transactionID,bidID);
+        console.log('\n--> Evaluate Session: read the bid that was just created');
+        let result = await contract.evaluateTransaction('QueryBid',sessionID,bidID);
         console.log('*** Result:  Bid: ' + prettyJSONString(result.toString()));
 
         gateway.disconnect();
@@ -74,13 +74,13 @@ async function main() {
 
         if (process.argv[2] == undefined || process.argv[3] == undefined
             || process.argv[4] == undefined || process.argv[5] == undefined || process.argv[6] == undefined) {
-            console.log("Usage: node bid.js org userID transactionID volume bidType");
+            console.log("Usage: node bid.js org userID sessionID volume bidType");
             process.exit(1);
         }
 
         const org = process.argv[2]
         const user = process.argv[3];
-        const transactionID = process.argv[4];
+        const sessionID = process.argv[4];
         const volume = process.argv[5];
         const bidType = process.argv[6];
 
@@ -90,7 +90,7 @@ async function main() {
             const ccp = buildCCPOrg1();
             const walletPath = path.join(__dirname, 'wallet/org1');
             const wallet = await buildWallet(Wallets, walletPath);
-            await bid(ccp,wallet,user,orgMSP,transactionID,volume, bidType);
+            await bid(ccp,wallet,user,orgMSP,sessionID,volume, bidType);
         }
         else if (org == 'Org2' || org == 'org2') {
 
@@ -98,9 +98,9 @@ async function main() {
             const ccp = buildCCPOrg2();
             const walletPath = path.join(__dirname, 'wallet/org2');
             const wallet = await buildWallet(Wallets, walletPath);
-            await bid(ccp,wallet,user,orgMSP,transactionID,volume, bidType);
+            await bid(ccp,wallet,user,orgMSP,sessionID,volume, bidType);
         }  else {
-            console.log("Usage: node bid.js org userID transactionID volume");
+            console.log("Usage: node bid.js org userID sessionID volume");
             console.log("Org must be Org1 or Org2");
           }
     } catch (error) {

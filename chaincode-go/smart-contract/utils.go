@@ -2,7 +2,7 @@
 SPDX-License-Identifier: Apache-2.0
 */
 
-package transaction
+package session
 
 import (
 	"fmt"
@@ -13,7 +13,7 @@ import (
 )
 
 // setAssetStateBasedEndorsement sets the endorsement policy of a new auction
-func setAssetStateBasedEndorsement(ctx contractapi.TransactionContextInterface, auctionID string, orgToEndorse string) error {
+func setAssetStateBasedEndorsement(ctx contractapi.TransactionContextInterface, sessionID string, orgToEndorse string) error {
 
 	endorsementPolicy, err := statebased.NewStateEP(nil)
 	if err != nil {
@@ -27,7 +27,7 @@ func setAssetStateBasedEndorsement(ctx contractapi.TransactionContextInterface, 
 	if err != nil {
 		return fmt.Errorf("failed to create endorsement policy bytes from org: %v", err)
 	}
-	err = ctx.GetStub().SetStateValidationParameter(auctionID, policy)
+	err = ctx.GetStub().SetStateValidationParameter(sessionID, policy)
 	if err != nil {
 		return fmt.Errorf("failed to set validation parameter on auction: %v", err)
 	}
@@ -36,9 +36,9 @@ func setAssetStateBasedEndorsement(ctx contractapi.TransactionContextInterface, 
 }
 
 // addAssetStateBasedEndorsement adds a new organization as an endorser of the auction
-func addAssetStateBasedEndorsement(ctx contractapi.TransactionContextInterface, auctionID string, orgToEndorse string) error {
+func addAssetStateBasedEndorsement(ctx contractapi.TransactionContextInterface, sessionID string, orgToEndorse string) error {
 
-	endorsementPolicy, err := ctx.GetStub().GetStateValidationParameter(auctionID)
+	endorsementPolicy, err := ctx.GetStub().GetStateValidationParameter(sessionID)
 	if err != nil {
 		return err
 	}
@@ -56,7 +56,7 @@ func addAssetStateBasedEndorsement(ctx contractapi.TransactionContextInterface, 
 	if err != nil {
 		return fmt.Errorf("failed to create endorsement policy bytes from org: %v", err)
 	}
-	err = ctx.GetStub().SetStateValidationParameter(auctionID, policy)
+	err = ctx.GetStub().SetStateValidationParameter(sessionID, policy)
 	if err != nil {
 		return fmt.Errorf("failed to set validation parameter on auction: %v", err)
 	}

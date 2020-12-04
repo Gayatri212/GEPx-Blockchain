@@ -12,12 +12,12 @@ import (
 )
 
 func main() {
-	transactionSmartContract, err := contractapi.NewChaincode(&transaction.SmartContract{})
+	sessionSmartContract, err := contractapi.NewChaincode(&session.SmartContract{})
 	if err != nil {
-		log.Panicf("Error creating transaction chaincode: %v", err)
+		log.Panicf("Error creating session chaincode: %v", err)
 	}
 
-	if err := transactionSmartContract.Start(); err != nil {
-		log.Panicf("Error starting transaction chaincode: %v", err)
+	if err := sessionSmartContract.Start(); err != nil {
+		log.Panicf("Error starting session chaincode: %v", err)
 	}
 }

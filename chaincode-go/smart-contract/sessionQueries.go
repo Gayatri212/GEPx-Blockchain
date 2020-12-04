@@ -2,7 +2,7 @@
 SPDX-License-Identifier: Apache-2.0
 */
 
-package transaction
+package session
 
 import (
 	"encoding/json"
@@ -10,28 +10,28 @@ import (
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 )
 
-// QueryTransaction allows all members of the channel to read a public transaction
-func (s *SmartContract) QueryTransaction(ctx contractapi.TransactionContextInterface, transactionID string) (*Transaction, error) {
+// QuerySession allows all members of the channel to read a public session
+func (s *SmartContract) QuerySession(ctx contractapi.TransactionContextInterface, sessionID string) (*Session, error) {
 
-	transactionJSON, err := ctx.GetStub().GetState(transactionID)
+	sessionJSON, err := ctx.GetStub().GetState(sessionID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get transaction object %v: %v", transactionID, err)
+		return nil, fmt.Errorf("failed to get session object %v: %v", sessionID, err)
 	}
-	if transactionJSON == nil {
-		return nil, fmt.Errorf("transaction does not exist")
+	if sessionJSON == nil {
+		return nil, fmt.Errorf("session does not exist")
 	}
 
-	var transaction *Transaction
-	err = json.Unmarshal(transactionJSON, &transaction)
+	var session *Session
+	err = json.Unmarshal(sessionJSON, &session)
 	if err != nil {
 		return nil, err
 	}
 
-	return transaction, nil
+	return session, nil
 }
 
 // QueryBid allows the submitter of the bid to read their bid from public state
-func (s *SmartContract) QueryBid(ctx contractapi.TransactionContextInterface, transactionID string, txID string) (*FullBid, error) {
+func (s *SmartContract) QueryBid(ctx contractapi.TransactionContextInterface, sessionID string, txID string) (*FullBid, error) {
 
 	err := verifyClientOrgMatchesPeerOrg(ctx)
 	if err != nil {
@@ -48,7 +48,7 @@ func (s *SmartContract) QueryBid(ctx contractapi.TransactionContextInterface, tr
 		return nil, fmt.Errorf("failed to get implicit collection name: %v", err)
 	}
 
-	bidKey, err := ctx.GetStub().CreateCompositeKey(bidKeyType, []string{transactionID, txID})
+	bidKey, err := ctx.GetStub().CreateCompositeKey(bidKeyType, []string{sessionID, txID})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create composite key: %v", err)
 	}
@@ -88,7 +88,7 @@ func (s *SmartContract) GetID(ctx contractapi.TransactionContextInterface) (stri
 }
 
 // Internal call to update status of bids
-func UpdateStatus(ctx contractapi.TransactionContextInterface,transactionID string,transactionJSON Transaction, bid FullBid, status string, bidKey string) error {
+func UpdateStatus(ctx contractapi.TransactionContextInterface,sessionID string,sessionJSON Session, bid FullBid, status string, bidKey string) error {
 	NewBid := FullBid{
 		BidType:  bid.BidType,
 		Volume:   bid.Volume,
@@ -98,16 +98,16 @@ func UpdateStatus(ctx contractapi.TransactionContextInterface,transactionID stri
 	}
 	
 	revealedBids := make(map[string]FullBid)
-	revealedBids = transactionJSON.RevealedBids
+	revealedBids = sessionJSON.FinalizedBids
 	revealedBids[bidKey] = NewBid
-	transactionJSON.RevealedBids = revealedBids
+	sessionJSON.FinalizedBids = revealedBids
 
-	newTransactionBytes, _ := json.Marshal(transactionJSON)
+	newSessionBytes, _ := json.Marshal(sessionJSON)
 
-	// put transaction with bid added back into state
-	err := ctx.GetStub().PutState(transactionID, newTransactionBytes)
+	// put session with bid added back into state
+	err := ctx.GetStub().PutState(sessionID, newSessionBytes)
 	if err != nil {
-		return fmt.Errorf("failed to update transaction: %v", err)
+		return fmt.Errorf("failed to update session: %v", err)
 	}
 	return nil
 }

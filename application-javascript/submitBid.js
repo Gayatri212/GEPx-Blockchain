@@ -23,7 +23,7 @@ function prettyJSONString(inputString) {
     }
 }
 
-async function submitBid(ccp,wallet,user,transactionID,bidID) {
+async function submitBid(ccp,wallet,user,sessionID,bidID) {
     try {
 
         const gateway = new Gateway();
@@ -35,24 +35,24 @@ async function submitBid(ccp,wallet,user,transactionID,bidID) {
         const network = await gateway.getNetwork(myChannel);
         const contract = network.getContract(myChaincodeName);
 
-        console.log('\n--> Evaluate Transaction: query the transaction you want to join');
-        let transactionString = await contract.evaluateTransaction('QueryTransaction',transactionID);
-        var transactionJSON = JSON.parse(transactionString);
+        console.log('\n--> Evaluate Session: query the session you want to join');
+        let sessionString = await contract.evaluateTransaction('QuerySession',sessionID);
+        var sessionJSON = JSON.parse(sessionString);
 
         let statefulTxn = contract.createTransaction('SubmitBid');
 
-        if (transactionJSON.organizations.length == 2) {
-            statefulTxn.setEndorsingOrganizations(transactionJSON.organizations[0],transactionJSON.organizations[1]);
+        if (sessionJSON.organizations.length == 2) {
+            statefulTxn.setEndorsingOrganizations(sessionJSON.organizations[0],sessionJSON.organizations[1]);
             } else {
-            statefulTxn.setEndorsingOrganizations(transactionJSON.organizations[0]);
+            statefulTxn.setEndorsingOrganizations(sessionJSON.organizations[0]);
             }
 
-        console.log('\n--> Submit Transaction: add bid to the transaction');
-        await statefulTxn.submit(transactionID,bidID);
+        console.log('\n--> Submit Session: add bid to the session');
+        await statefulTxn.submit(sessionID,bidID);
 
-        console.log('\n--> Evaluate Transaction: query the transaction to see that our bid was added');
-        let result = await contract.evaluateTransaction('QueryTransaction',transactionID);
-        console.log('*** Result: transaction: ' + prettyJSONString(result.toString()));
+        console.log('\n--> Evaluate Session: query the session to see that our bid was added');
+        let result = await contract.evaluateTransaction('QuerySession',sessionID);
+        console.log('*** Result: session: ' + prettyJSONString(result.toString()));
 
         gateway.disconnect();
     } catch (error) {
@@ -66,13 +66,13 @@ async function main() {
 
         if (process.argv[2] == undefined || process.argv[3] == undefined
             || process.argv[4] == undefined || process.argv[5] == undefined) {
-            console.log("Usage: node submitBid.js org userID transactionID bidID");
+            console.log("Usage: node submitBid.js org userID sessionID bidID");
             process.exit(1);
         }
 
         const org = process.argv[2]
         const user = process.argv[3];
-        const transactionID = process.argv[4];
+        const sessionID = process.argv[4];
         const bidID = process.argv[5];
 
         if (org == 'Org1' || org == 'org1') {
@@ -81,7 +81,7 @@ async function main() {
             const ccp = buildCCPOrg1();
             const walletPath = path.join(__dirname, 'wallet/org1');
             const wallet = await buildWallet(Wallets, walletPath);
-            await submitBid(ccp,wallet,user,transactionID,bidID);
+            await submitBid(ccp,wallet,user,sessionID,bidID);
         }
         else if (org == 'Org2' || org == 'org2') {
 
@@ -89,10 +89,10 @@ async function main() {
             const ccp = buildCCPOrg2();
             const walletPath = path.join(__dirname, 'wallet/org2');
             const wallet = await buildWallet(Wallets, walletPath);
-            await submitBid(ccp,wallet,user,transactionID,bidID);
+            await submitBid(ccp,wallet,user,sessionID,bidID);
         }
         else {
-            console.log("Usage: node submitBid.js org userID transactionID bidID");
+            console.log("Usage: node submitBid.js org userID sessionID bidID");
             console.log("Org must be Org1 or Org2");
           }
     } catch (error) {

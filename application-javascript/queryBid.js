@@ -23,7 +23,7 @@ function prettyJSONString(inputString) {
     }
 }
 
-async function queryBid(ccp,wallet,user,transactionID,bidID) {
+async function queryBid(ccp,wallet,user,sessionID,bidID) {
     try {
 
         const gateway = new Gateway();
@@ -35,8 +35,8 @@ async function queryBid(ccp,wallet,user,transactionID,bidID) {
         const network = await gateway.getNetwork(myChannel);
         const contract = network.getContract(myChaincodeName);
 
-        console.log('\n--> Evaluate Transaction: read bid from private data store');
-        let result = await contract.evaluateTransaction('QueryBid',transactionID,bidID);
+        console.log('\n--> Evaluate Session: read bid from private data store');
+        let result = await contract.evaluateTransaction('QueryBid',sessionID,bidID);
         console.log('*** Result: Bid: ' + prettyJSONString(result.toString()));
 
         gateway.disconnect();
@@ -50,13 +50,13 @@ async function main() {
 
         if (process.argv[2] == undefined || process.argv[3] == undefined
             || process.argv[4] == undefined || process.argv[5] == undefined) {
-            console.log("Usage: node bid.js org userID transactionID bidID");
+            console.log("Usage: node bid.js org userID sessionID bidID");
             process.exit(1);
         }
 
         const org = process.argv[2]
         const user = process.argv[3];
-        const transactionID = process.argv[4];
+        const sessionID = process.argv[4];
         const bidID = process.argv[5];
 
         if (org == 'Org1' || org == 'org1') {
@@ -65,7 +65,7 @@ async function main() {
             const ccp = buildCCPOrg1();
             const walletPath = path.join(__dirname, 'wallet/org1');
             const wallet = await buildWallet(Wallets, walletPath);
-            await queryBid(ccp,wallet,user,transactionID,bidID);
+            await queryBid(ccp,wallet,user,sessionID,bidID);
         }
         else if (org == 'Org2' || org == 'org2') {
 
@@ -73,9 +73,9 @@ async function main() {
             const ccp = buildCCPOrg2();
             const walletPath = path.join(__dirname, 'wallet/org2');
             const wallet = await buildWallet(Wallets, walletPath);
-            await queryBid(ccp,wallet,user,transactionID,bidID);
+            await queryBid(ccp,wallet,user,sessionID,bidID);
         } else {
-            console.log("Usage: node bid.js org userID transactionID bidID");
+            console.log("Usage: node bid.js org userID sessionID bidID");
             console.log("Org must be Org1 or Org2");
           }
     } catch (error) {

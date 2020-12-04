@@ -23,7 +23,7 @@ function prettyJSONString(inputString) {
     }
 }
 
-async function queryTransaction(ccp,wallet,user,transactionID) {
+async function querySession(ccp,wallet,user,sessionID) {
     try {
 
         const gateway = new Gateway();
@@ -35,9 +35,9 @@ async function queryTransaction(ccp,wallet,user,transactionID) {
         const network = await gateway.getNetwork(myChannel);
         const contract = network.getContract(myChaincodeName);
 
-        console.log('\n--> Evaluate Transaction: query the transaction');
-        let result = await contract.evaluateTransaction('QueryTransaction',transactionID);
-        console.log('*** Result: Transaction: ' + prettyJSONString(result.toString()));
+        console.log('\n--> Evaluate Session: query the session');
+        let result = await contract.evaluateTransaction('QuerySession',sessionID);
+        console.log('*** Result: Session: ' + prettyJSONString(result.toString()));
 
         gateway.disconnect();
     } catch (error) {
@@ -50,13 +50,13 @@ async function main() {
 
         if (process.argv[2] == undefined || process.argv[3] == undefined
             || process.argv[4] == undefined) {
-            console.log("Usage: node queryTransaction.js org userID transactionID");
+            console.log("Usage: node querySession.js org userID sessionID");
             process.exit(1);
         }
 
         const org = process.argv[2]
         const user = process.argv[3];
-        const transactionID = process.argv[4];
+        const sessionID = process.argv[4];
 
         if (org == 'Org1' || org == 'org1') {
 
@@ -64,7 +64,7 @@ async function main() {
             const ccp = buildCCPOrg1();
             const walletPath = path.join(__dirname, 'wallet/org1');
             const wallet = await buildWallet(Wallets, walletPath);
-            await queryTransaction(ccp,wallet,user,transactionID);
+            await querySession(ccp,wallet,user,sessionID);
         }
         else if (org == 'Org2' || org == 'org2') {
 
@@ -72,9 +72,9 @@ async function main() {
             const ccp = buildCCPOrg2();
             const walletPath = path.join(__dirname, 'wallet/org2');
             const wallet = await buildWallet(Wallets, walletPath);
-            await queryTransaction(ccp,wallet,user,transactionID);
+            await querySession(ccp,wallet,user,sessionID);
         }  else {
-            console.log("Usage: node queryTransaction.js org userID transactionID");
+            console.log("Usage: node querySession.js org userID sessionID");
             console.log("Org must be Org1 or Org2");
           }
     } catch (error) {

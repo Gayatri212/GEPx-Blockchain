@@ -2,7 +2,7 @@
 SPDX-License-Identifier: Apache-2.0
 */
 
-package transaction
+package session
 
 import (
 	"bytes"
@@ -17,12 +17,12 @@ type SmartContract struct {
 	contractapi.Contract
 }
 
-// Transaction data
-type Transaction struct {
+// Session data
+type Session struct {
 	Admin       	string             `json:"admin"`
 	Orgs         	[]string           `json:"organizations"`
 	PrivateBids  	map[string]BidHash `json:"privateBids"`
-	RevealedBids 	map[string]FullBid `json:"revealedBids"`
+	FinalizedBids 	map[string]FullBid `json:"finalizedBids"`
 	Status       	string             `json:"status"`
 }
 
@@ -49,9 +49,9 @@ const(
 
 const bidKeyType = "bid"
 
-// CreateTransaction creates on transaction on the public channel. The identity that
-// submits the transacion becomes the admin of the transaction
-func (s *SmartContract) CreateTransaction(ctx contractapi.TransactionContextInterface, transactionID string) error {
+// CreateSession creates on session on the public channel. The identity that
+// submits the transacion becomes the admin of the session
+func (s *SmartContract) CreateSession(ctx contractapi.TransactionContextInterface, sessionID string) error {
 
 	// get ID of submitting client
 	clientID, err := ctx.GetClientIdentity().GetID()
@@ -65,31 +65,31 @@ func (s *SmartContract) CreateTransaction(ctx contractapi.TransactionContextInte
 		return fmt.Errorf("failed to get client identity %v", err)
 	}
 
-	// Create transaction
+	// Create session
 	bidders := make(map[string]BidHash)
-	revealedBids := make(map[string]FullBid)
+	finalizedBids := make(map[string]FullBid)
 
-	transaction := Transaction{
+	session := Session{
 		Admin:     		clientID,
 		Orgs:       	[]string{clientOrgID},
 		PrivateBids:  	bidders,
-		RevealedBids: 	revealedBids,
+		FinalizedBids: 	finalizedBids,
 		Status:     	"Open",
 	}
 
-	transactionBytes, err := json.Marshal(transaction)
+	sessionBytes, err := json.Marshal(session)
 	if err != nil {
 		return err
 	}
 
-	// put transaction into state
-	err = ctx.GetStub().PutState(transactionID, transactionBytes)
+	// put session into state
+	err = ctx.GetStub().PutState(sessionID, sessionBytes)
 	if err != nil {
-		return fmt.Errorf("failed to put transaction in public data: %v", err)
+		return fmt.Errorf("failed to put session in public data: %v", err)
 	}
 
-	// set the admin of the transaction as an endorser
-	err = setAssetStateBasedEndorsement(ctx, transactionID, clientOrgID)
+	// set the admin of the session as an endorser
+	err = setAssetStateBasedEndorsement(ctx, sessionID, clientOrgID)
 	if err != nil {
 		return fmt.Errorf("failed setting state based endorsement for new organization: %v", err)
 	}
@@ -97,10 +97,10 @@ func (s *SmartContract) CreateTransaction(ctx contractapi.TransactionContextInte
 	return nil
 }
 
-// Bid is used to add a user's bid to the transaction. The bid is stored in the private
+// Bid is used to add a user's bid to the session. The bid is stored in the private
 // data collection on the peer of the bidder's organization. The function returns
-// the transaction ID so that users can identify and query their bid
-func (s *SmartContract) Bid(ctx contractapi.TransactionContextInterface, transactionID string) (string, error) {
+// the session ID so that users can identify and query their bid
+func (s *SmartContract) Bid(ctx contractapi.TransactionContextInterface, sessionID string) (string, error) {
 
 	// get bid from transient map
 	transientMap, err := ctx.GetStub().GetTransient()
@@ -125,11 +125,11 @@ func (s *SmartContract) Bid(ctx contractapi.TransactionContextInterface, transac
 		return "", fmt.Errorf("Cannot store bid on this peer, not a member of this org: Error %v", err)
 	}
 
-	// the transaction ID is used as a unique index for the bid
+	// the session ID is used as a unique index for the bid
 	txID := ctx.GetStub().GetTxID()
 
-	// create a composite key using the transaction ID
-	bidKey, err := ctx.GetStub().CreateCompositeKey(bidKeyType, []string{transactionID, txID})
+	// create a composite key using the session ID
+	bidKey, err := ctx.GetStub().CreateCompositeKey(bidKeyType, []string{sessionID, txID})
 	if err != nil {
 		return "", fmt.Errorf("failed to create composite key: %v", err)
 	}
@@ -145,9 +145,9 @@ func (s *SmartContract) Bid(ctx contractapi.TransactionContextInterface, transac
 }
 
 // SubmitBid is used by the bidder to add the hash of that bid stored in private data to the
-// transaction. Note that this function alters the transaction in private state, and needs
-// to meet the transaction endorsement policy. Transaction ID is used identify the bid
-func (s *SmartContract) SubmitBid(ctx contractapi.TransactionContextInterface, transactionID string, txID string) error {
+// session. Note that this function alters the session in private state, and needs
+// to meet the session endorsement policy. Session ID is used identify the bid
+func (s *SmartContract) SubmitBid(ctx contractapi.TransactionContextInterface, sessionID string, txID string) error {
 
 	// get the MSP ID of the bidder's org
 	clientOrgID, err := ctx.GetClientIdentity().GetMSPID()
@@ -155,22 +155,22 @@ func (s *SmartContract) SubmitBid(ctx contractapi.TransactionContextInterface, t
 		return fmt.Errorf("failed to get client MSP ID: %v", err)
 	}
 
-	// get the transaction from state
-	transactionBytes, err := ctx.GetStub().GetState(transactionID)
-	var transactionJSON Transaction
+	// get the session from state
+	sessionBytes, err := ctx.GetStub().GetState(sessionID)
+	var sessionJSON Session
 
-	if transactionBytes == nil {
-		return fmt.Errorf("Transaction not found: %v", transactionID)
+	if sessionBytes == nil {
+		return fmt.Errorf("Session not found: %v", sessionID)
 	}
-	err = json.Unmarshal(transactionBytes, &transactionJSON)
+	err = json.Unmarshal(sessionBytes, &sessionJSON)
 	if err != nil {
-		return fmt.Errorf("failed to create transaction object JSON: %v", err)
+		return fmt.Errorf("failed to create session object JSON: %v", err)
 	}
 
-	// the transaction needs to be Placed for users to add their bid
-	Status := transactionJSON.Status
+	// the session needs to be Placed for users to add their bid
+	Status := sessionJSON.Status
 	if Status != "Open" {
-		return fmt.Errorf("cannot change finalized or ended transaction")
+		return fmt.Errorf("cannot change finalized or ended session")
 	}
 
 	// get the inplicit collection name of bidder's org
@@ -179,8 +179,8 @@ func (s *SmartContract) SubmitBid(ctx contractapi.TransactionContextInterface, t
 		return fmt.Errorf("failed to get implicit collection name: %v", err)
 	}
 
-	// use the transaction ID passed as a parameter to create composite bid key
-	bidKey, err := ctx.GetStub().CreateCompositeKey(bidKeyType, []string{transactionID, txID})
+	// use the session ID passed as a parameter to create composite bid key
+	bidKey, err := ctx.GetStub().CreateCompositeKey(bidKeyType, []string{sessionID, txID})
 	if err != nil {
 		return fmt.Errorf("failed to create composite key: %v", err)
 	}
@@ -201,34 +201,34 @@ func (s *SmartContract) SubmitBid(ctx contractapi.TransactionContextInterface, t
 	}
 
 	bidders := make(map[string]BidHash)
-	bidders = transactionJSON.PrivateBids
+	bidders = sessionJSON.PrivateBids
 	bidders[bidKey] = NewHash
-	transactionJSON.PrivateBids = bidders
+	sessionJSON.PrivateBids = bidders
 
 	// Add the bidding organization to the list of participating organizations if it is not already
-	Orgs := transactionJSON.Orgs
+	Orgs := sessionJSON.Orgs
 	if !(contains(Orgs, clientOrgID)) {
 		newOrgs := append(Orgs, clientOrgID)
-		transactionJSON.Orgs = newOrgs
+		sessionJSON.Orgs = newOrgs
 
-		err = addAssetStateBasedEndorsement(ctx, transactionID, clientOrgID)
+		err = addAssetStateBasedEndorsement(ctx, sessionID, clientOrgID)
 		if err != nil {
 			return fmt.Errorf("failed setting state based endorsement for new organization: %v", err)
 		}
 	}
 
-	newTransactionBytes, _ := json.Marshal(transactionJSON)
+	newTransactionBytes, _ := json.Marshal(sessionJSON)
 
-	err = ctx.GetStub().PutState(transactionID, newTransactionBytes)
+	err = ctx.GetStub().PutState(sessionID, newTransactionBytes)
 	if err != nil {
-		return fmt.Errorf("failed to update transaction: %v", err)
+		return fmt.Errorf("failed to update session: %v", err)
 	}
 
 	return nil
 }
 
-// RevealBid is used by a bidder to reveal their bid after the transaction is Finalized
-func (s *SmartContract) RevealBid(ctx contractapi.TransactionContextInterface, transactionID string, txID string) error {
+// FinalizeBid is used by a bidder to reveal their bid after the session is Finalized
+func (s *SmartContract) FinalizeBid(ctx contractapi.TransactionContextInterface, sessionID string, txID string) error {
 
 	// get bid from transient map
 	transientMap, err := ctx.GetStub().GetTransient()
@@ -247,8 +247,8 @@ func (s *SmartContract) RevealBid(ctx contractapi.TransactionContextInterface, t
 		return fmt.Errorf("failed to get implicit collection name: %v", err)
 	}
 
-	// use transaction ID to create composit bid key
-	bidKey, err := ctx.GetStub().CreateCompositeKey(bidKeyType, []string{transactionID, txID})
+	// use session ID to create composit bid key
+	bidKey, err := ctx.GetStub().CreateCompositeKey(bidKeyType, []string{sessionID, txID})
 	if err != nil {
 		return fmt.Errorf("failed to create composite key: %v", err)
 	}
@@ -262,28 +262,28 @@ func (s *SmartContract) RevealBid(ctx contractapi.TransactionContextInterface, t
 		return fmt.Errorf("bid hash does not exist: %s", bidKey)
 	}
 
-	// get transaction from public state
-	transactionBytes, err := ctx.GetStub().GetState(transactionID)
+	// get session from public state
+	sessionBytes, err := ctx.GetStub().GetState(sessionID)
 	if err != nil {
-		return fmt.Errorf("failed to get transaction %v: %v", transactionID, err)
+		return fmt.Errorf("failed to get session %v: %v", sessionID, err)
 	}
-	if transactionBytes == nil {
-		return fmt.Errorf("Transaction interest object %v not found", transactionID)
+	if sessionBytes == nil {
+		return fmt.Errorf("Session interest object %v not found", sessionID)
 	}
 
-	var transactionJSON Transaction
-	err = json.Unmarshal(transactionBytes, &transactionJSON)
+	var sessionJSON Session
+	err = json.Unmarshal(sessionBytes, &sessionJSON)
 	if err != nil {
-		return fmt.Errorf("failed to create transaction object JSON: %v", err)
+		return fmt.Errorf("failed to create session object JSON: %v", err)
 	}
 
-	// Complete a series of three checks before we add the bid to the transaction
+	// Complete a series of three checks before we add the bid to the session
 
-	// check 1: check that the transaction is Finalized. We cannot reveal a
-	// bid to an Placed transaction
-	Status := transactionJSON.Status
+	// check 1: check that the session is Finalized. We cannot reveal a
+	// bid to an Placed session
+	Status := sessionJSON.Status
 	if Status != "Close" {
-		return fmt.Errorf("cannot reveal bid for Placed or ended transaction")
+		return fmt.Errorf("cannot reveal bid for Placed or ended session")
 	}
 
 	// check 2: check that hash of revealed bid matches hash of private bid
@@ -296,7 +296,7 @@ func (s *SmartContract) RevealBid(ctx contractapi.TransactionContextInterface, t
 
 	// verify that the hash of the passed immutable properties matches the on-chain hash
 	if !bytes.Equal(calculatedBidJSONHash, bidHash) {
-		return fmt.Errorf("hash %x for bid JSON %s does not match hash in transaction: %x",
+		return fmt.Errorf("hash %x for bid JSON %s does not match hash in session: %x",
 			calculatedBidJSONHash,
 			transientBidJSON,
 			bidHash,
@@ -305,21 +305,21 @@ func (s *SmartContract) RevealBid(ctx contractapi.TransactionContextInterface, t
 
 	// check 3; check hash of relealed bid matches hash of private bid that was
 	// added earlier. This ensures that the bid has not changed since it
-	// was added to the transaction
+	// was added to the session
 
-	bidders := transactionJSON.PrivateBids
+	bidders := sessionJSON.PrivateBids
 	privateBidHashString := bidders[bidKey].Hash
 
 	onChainBidHashString := fmt.Sprintf("%x", bidHash)
 	if privateBidHashString != onChainBidHashString {
-		return fmt.Errorf("hash %s for bid JSON %s does not match hash in transaction: %s, bidder must have changed bid",
+		return fmt.Errorf("hash %s for bid JSON %s does not match hash in session: %s, bidder must have changed bid",
 			privateBidHashString,
 			transientBidJSON,
 			onChainBidHashString,
 		)
 	}
 
-	// we can add the bid to the transaction if all checks have passed
+	// we can add the bid to the session if all checks have passed
 	type transientBidInput struct {
 		BidType	 BidType `json:"bidType"`
 		Volume   int    `json:"volume"`
@@ -349,47 +349,47 @@ func (s *SmartContract) RevealBid(ctx contractapi.TransactionContextInterface, t
 		Status:	  "Finalized",
 	}
 
-	// check 4: make sure that the transaction is being submitted is the bidder
+	// check 4: make sure that the session is being submitted is the bidder
 	if bidInput.Bidder != clientID {
 		return fmt.Errorf("Permission denied, client id %v is not the owner of the bid", clientID)
 	}
 
-	revealedBids := make(map[string]FullBid)
-	revealedBids = transactionJSON.RevealedBids
-	revealedBids[bidKey] = NewBid
-	transactionJSON.RevealedBids = revealedBids
+	finalizedBids := make(map[string]FullBid)
+	finalizedBids = sessionJSON.FinalizedBids
+	finalizedBids[bidKey] = NewBid
+	sessionJSON.FinalizedBids = finalizedBids
 
-	newTransactionBytes, _ := json.Marshal(transactionJSON)
+	newTransactionBytes, _ := json.Marshal(sessionJSON)
 
-	// put transaction with bid added back into state
-	err = ctx.GetStub().PutState(transactionID, newTransactionBytes)
+	// put session with bid added back into state
+	err = ctx.GetStub().PutState(sessionID, newTransactionBytes)
 	if err != nil {
-		return fmt.Errorf("failed to update transaction: %v", err)
+		return fmt.Errorf("failed to update session: %v", err)
 	}
 
 	return nil
 }
 
-// CloseTransaction can be used by the admin to close the transaction. This prevents
-// bids from being added to the transaction, and allows users to reveal their bid
-func (s *SmartContract) CloseTransaction(ctx contractapi.TransactionContextInterface, transactionID string) error {
+// CloseSession can be used by the admin to close the session. This prevents
+// bids from being added to the session, and allows users to reveal their bid
+func (s *SmartContract) CloseSession(ctx contractapi.TransactionContextInterface, sessionID string) error {
 
-	transactionBytes, err := ctx.GetStub().GetState(transactionID)
+	sessionBytes, err := ctx.GetStub().GetState(sessionID)
 	if err != nil {
-		return fmt.Errorf("failed to get transaction %v: %v", transactionID, err)
+		return fmt.Errorf("failed to get session %v: %v", sessionID, err)
 	}
 
-	if transactionBytes == nil {
-		return fmt.Errorf("Transaction interest object %v not found", transactionID)
+	if sessionBytes == nil {
+		return fmt.Errorf("Session interest object %v not found", sessionID)
 	}
 
-	var transactionJSON Transaction
-	err = json.Unmarshal(transactionBytes, &transactionJSON)
+	var sessionJSON Session
+	err = json.Unmarshal(sessionBytes, &sessionJSON)
 	if err != nil {
-		return fmt.Errorf("failed to create transaction object JSON: %v", err)
+		return fmt.Errorf("failed to create session object JSON: %v", err)
 	}
 
-	// the transaction can only be Finalized by the admin
+	// the session can only be Finalized by the admin
 
 	// get ID of submitting client
 	clientID, err := ctx.GetClientIdentity().GetID()
@@ -397,48 +397,48 @@ func (s *SmartContract) CloseTransaction(ctx contractapi.TransactionContextInter
 		return fmt.Errorf("failed to get client identity %v", err)
 	}
 
-	Admin := transactionJSON.Admin
+	Admin := sessionJSON.Admin
 	if Admin != clientID {
-		return fmt.Errorf("transaction can only be Finalized by admin: %v", err)
+		return fmt.Errorf("session can only be Finalized by admin: %v", err)
 	}
 
-	Status := transactionJSON.Status
+	Status := sessionJSON.Status
 	if Status != "Open" {
-		return fmt.Errorf("cannot close transaction that is not open")
+		return fmt.Errorf("cannot close session that is not open")
 	}
 
-	transactionJSON.Status = string("Close")
+	sessionJSON.Status = string("Close")
 
-	FinalizedTransaction, _ := json.Marshal(transactionJSON)
+	FinalizedTransaction, _ := json.Marshal(sessionJSON)
 
-	err = ctx.GetStub().PutState(transactionID, FinalizedTransaction)
+	err = ctx.GetStub().PutState(sessionID, FinalizedTransaction)
 	if err != nil {
-		return fmt.Errorf("failed to close transaction: %v", err)
+		return fmt.Errorf("failed to close session: %v", err)
 	}
 
 	return nil
 }
 
-// EndTransaction both changes the transaction status to Finalized and calculates the winners
-// of the transaction
-func (s *SmartContract) EndTransaction(ctx contractapi.TransactionContextInterface, transactionID string) error {
+// EndSession both changes the session status to Finalized and calculates the winners
+// of the session
+func (s *SmartContract) EndSession(ctx contractapi.TransactionContextInterface, sessionID string) error {
 
-	transactionBytes, err := ctx.GetStub().GetState(transactionID)
+	sessionBytes, err := ctx.GetStub().GetState(sessionID)
 	if err != nil {
-		return fmt.Errorf("failed to get transaction %v: %v", transactionID, err)
+		return fmt.Errorf("failed to get session %v: %v", sessionID, err)
 	}
 
-	if transactionBytes == nil {
-		return fmt.Errorf("Transaction interest object %v not found", transactionID)
+	if sessionBytes == nil {
+		return fmt.Errorf("Session interest object %v not found", sessionID)
 	}
 
-	var transactionJSON Transaction
-	err = json.Unmarshal(transactionBytes, &transactionJSON)
+	var sessionJSON Session
+	err = json.Unmarshal(sessionBytes, &sessionJSON)
 	if err != nil {
-		return fmt.Errorf("failed to create transaction object JSON: %v", err)
+		return fmt.Errorf("failed to create session object JSON: %v", err)
 	}
 
-	// Check that the transaction is being ended by the admin
+	// Check that the session is being ended by the admin
 
 	// get ID of submitting client
 	clientID, err := ctx.GetClientIdentity().GetID()
@@ -446,20 +446,20 @@ func (s *SmartContract) EndTransaction(ctx contractapi.TransactionContextInterfa
 		return fmt.Errorf("failed to get client identity %v", err)
 	}
 
-	Admin := transactionJSON.Admin
+	Admin := sessionJSON.Admin
 	if Admin != clientID {
-		return fmt.Errorf("transaction can only be ended by admin: %v", err)
+		return fmt.Errorf("session can only be ended by admin: %v", err)
 	}
 
-	Status := transactionJSON.Status
+	Status := sessionJSON.Status
 	if Status != "Close" {
-		return fmt.Errorf("Can only end a closed transaction")
+		return fmt.Errorf("Can only end a closed session")
 	}
 
 	// get the list of revealed bids
-	revealedBidMap := transactionJSON.RevealedBids
-	if len(transactionJSON.RevealedBids) == 0 {
-		return fmt.Errorf("No bids have been revealed, cannot end transaction: %v", err)
+	revealedBidMap := sessionJSON.FinalizedBids
+	if len(sessionJSON.FinalizedBids) == 0 {
+		return fmt.Errorf("No bids have been revealed, cannot end session: %v", err)
 	}
 
 	var totalSell, totalBuy int
@@ -478,52 +478,52 @@ func (s *SmartContract) EndTransaction(ctx contractapi.TransactionContextInterfa
 		if bid.BidType == "sell" || bid.BidType == "Sell" {
 			if bid.Volume < totalBuy {
 				totalBuy = totalBuy - bid.Volume
-				err = UpdateStatus(ctx,transactionID,transactionJSON, bid,"Aprroved",bidKey)
+				err = UpdateStatus(ctx,sessionID,sessionJSON, bid,"Approved",bidKey)
 				if err != nil {
-					return fmt.Errorf("failed to update transaction: %v", err)
+					return fmt.Errorf("failed to update session: %v", err)
 				}			
 			}else if totalBuy != 0 {
 				totalBuy -= totalBuy
-				err = UpdateStatus(ctx,transactionID,transactionJSON, bid,"Partially Aprroved",bidKey)
+				err = UpdateStatus(ctx,sessionID,sessionJSON, bid,"Partially Approved",bidKey)
 				if err != nil {
-					return fmt.Errorf("failed to update transaction: %v", err)
+					return fmt.Errorf("failed to update session: %v", err)
 				}
 			}else {
-				err = UpdateStatus(ctx,transactionID,transactionJSON, bid,"Declined",bidKey)
+				err = UpdateStatus(ctx,sessionID,sessionJSON, bid,"Not Approved",bidKey)
 				if err != nil {
-					return fmt.Errorf("failed to update transaction: %v", err)
+					return fmt.Errorf("failed to update session: %v", err)
 				}
 			}
 		}
 		if bid.BidType == "buy" || bid.BidType == "Buy" {
 			if bid.Volume < totalSell {
 				totalSell = totalSell - bid.Volume
-				err = UpdateStatus(ctx,transactionID,transactionJSON, bid,"Aprroved",bidKey)
+				err = UpdateStatus(ctx,sessionID,sessionJSON, bid,"Approved",bidKey)
 				if err != nil {
-					return fmt.Errorf("failed to update transaction: %v", err)
+					return fmt.Errorf("failed to update session: %v", err)
 				}				
 			}else if totalSell != 0 {
 				totalSell -= totalSell
-				err = UpdateStatus(ctx,transactionID,transactionJSON, bid,"Partially Aprroved",bidKey)
+				err = UpdateStatus(ctx,sessionID,sessionJSON, bid,"Partially Approved",bidKey)
 				if err != nil {
-					return fmt.Errorf("failed to update transaction: %v", err)
+					return fmt.Errorf("failed to update session: %v", err)
 				}
 			}else {
-				err = UpdateStatus(ctx,transactionID,transactionJSON, bid,"Declined",bidKey)
+				err = UpdateStatus(ctx,sessionID,sessionJSON, bid,"Not Approved",bidKey)
 				if err != nil {
-					return fmt.Errorf("failed to update transaction: %v", err)
+					return fmt.Errorf("failed to update session: %v", err)
 				}
 			}
 		}
 	}
 
-	transactionJSON.Status = string("ended")
+	sessionJSON.Status = string("ended")
 
-	FinalizedTransaction, _ := json.Marshal(transactionJSON)
+	FinalizedTransaction, _ := json.Marshal(sessionJSON)
 
-	err = ctx.GetStub().PutState(transactionID, FinalizedTransaction)
+	err = ctx.GetStub().PutState(sessionID, FinalizedTransaction)
 	if err != nil {
-		return fmt.Errorf("failed to end transaction: %v", err)
+		return fmt.Errorf("failed to end session: %v", err)
 	}
 	return nil
 }

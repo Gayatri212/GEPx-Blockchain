@@ -35,19 +35,19 @@ async function addBid(ccp,wallet,user,transactionID,bidID) {
         const network = await gateway.getNetwork(myChannel);
         const contract = network.getContract(myChaincodeName);
 
-        console.log('\n--> Evaluate Transaction: read your bid');
+        console.log('\n--> Evaluate Session: read your bid');
         let bidString = await contract.evaluateTransaction('QueryBid',transactionID,bidID);
         var bidJSON = JSON.parse(bidString);
 
-        //console.log('\n--> Evaluate Transaction: query the transaction you want to join');
-        let transactionString = await contract.evaluateTransaction('QueryTransaction',transactionID);
+        //console.log('\n--> Evaluate Session: query the transaction you want to join');
+        let transactionString = await contract.evaluateTransaction('QuerySession',transactionID);
        // console.log('*** Result:  Bid: ' + prettyJSONString(transactionString.toString()));
         var transactionJSON = JSON.parse(transactionString);
 
         let bidData = { bidType: bidJSON.bidType, volume: parseInt(bidJSON.volume), org: bidJSON.org, bidder: bidJSON.bidder, status: bidJSON.status};
         console.log('*** Result:  Bid: ' + JSON.stringify(bidData,null,2));
 
-        let statefulTxn = contract.createTransaction('RevealBid');
+        let statefulTxn = contract.createTransaction('FinalizeBid');
         let tmapData = Buffer.from(JSON.stringify(bidData));
         statefulTxn.setTransient({
               bid: tmapData
@@ -61,9 +61,9 @@ async function addBid(ccp,wallet,user,transactionID,bidID) {
 
         await statefulTxn.submit(transactionID,bidID);
 
-        console.log('\n--> Evaluate Transaction: query the transaction to see that our bid was added');
-        let result = await contract.evaluateTransaction('QueryTransaction',transactionID);
-        console.log('*** Result: Transaction: ' + prettyJSONString(result.toString()));
+        console.log('\n--> Evaluate Session: query the transaction to see that our bid was added');
+        let result = await contract.evaluateTransaction('QuerySession',transactionID);
+        console.log('*** Result: Session: ' + prettyJSONString(result.toString()));
 
         gateway.disconnect();
     } catch (error) {
@@ -77,7 +77,7 @@ async function main() {
 
         if (process.argv[2] == undefined || process.argv[3] == undefined
             || process.argv[4] == undefined || process.argv[5] == undefined) {
-            console.log("Usage: node revealBid.js org userID transactionID bidID");
+            console.log("Usage: node finalizeBid.js org userID transactionID bidID");
             process.exit(1);
         }
 
@@ -103,7 +103,7 @@ async function main() {
             await addBid(ccp,wallet,user,transactionID,bidID);
         }
         else {
-            console.log("Usage: node revealBid.js org userID transactionID bidID");
+            console.log("Usage: node finalizeBid.js org userID transactionID bidID");
             console.log("Org must be Org1 or Org2");
           }
     } catch (error) {

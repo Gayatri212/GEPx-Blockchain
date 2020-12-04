@@ -50,7 +50,7 @@ async function connectToOrg2CA() {
 async function main() {
 
     if (process.argv[2] == undefined) {
-        console.log("Usage: node enrollAdmin.js Org");
+        console.log("Usage: node enrollNode.js Org");
         process.exit(1);
     }
 
@@ -68,7 +68,7 @@ async function main() {
          console.log("Org must be Org1 or Org2");
       }
     } catch (error) {
-        console.error(`Error in enrolling admin: ${error}`);
+        console.error(`Error in enrolling node: ${error}`);
         process.exit(1);
     }
 }
